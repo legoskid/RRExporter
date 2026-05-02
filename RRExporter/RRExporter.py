@@ -96,6 +96,14 @@ def process_subroom(subroom, room_id, room_folder, auth_headers):
             past_datablob_filename = os.path.basename(past_datablob)
             past_datablob_dest = os.path.join(past_versions_folder, past_datablob_filename)
             download_file(f"https://cdn.rec.net/room/{past_datablob}", past_datablob_dest)
+
+            # Save the past version JSON alongside the DataBlob
+            past_json_filename = os.path.splitext(past_datablob_filename)[0] + ".json"
+            past_json_dest = os.path.join(past_versions_folder, past_json_filename)
+            with open(past_json_dest, "w", encoding="utf-8") as jf:
+                json.dump(save, jf, indent=2)
+            print(f"    Saved past version JSON: {past_json_dest}")
+
             run_asset_scripts(past_datablob_dest, past_versions_folder)
 
     except requests.RequestException as e:
