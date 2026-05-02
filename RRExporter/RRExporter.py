@@ -3,6 +3,9 @@ import json
 import subprocess
 import requests
 import sys
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -16,7 +19,7 @@ def sanitize_folder_name(name, max_length=50):
 def download_file(url, dest_path, headers=None):
     """Download a file from a URL to a destination path."""
     try:
-        response = requests.get(url, headers=headers, stream=True)
+        response = requests.get(url, headers=headers, stream=True, verify=False)
         response.raise_for_status()
         with open(dest_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
@@ -74,7 +77,7 @@ def process_subroom(subroom, room_id, room_folder, auth_headers):
     )
     print(f"  Fetching past versions from: {saves_url}")
     try:
-        saves_response = requests.get(saves_url, headers=auth_headers)
+        saves_response = requests.get(saves_url, headers=auth_headers, verify=False)
         saves_response.raise_for_status()
         saves_data = saves_response.json()
 
@@ -113,7 +116,7 @@ def process_room(room_entry, auth_headers):
     room_url = f"https://rooms.rec.net/rooms/{room_id}?include=767277"
     print(f"Fetching room data from: {room_url}")
     try:
-        room_response = requests.get(room_url, headers=auth_headers)
+        room_response = requests.get(room_url, headers=auth_headers, verify=False)
         room_response.raise_for_status()
         room_data = room_response.json()
     except requests.RequestException as e:
