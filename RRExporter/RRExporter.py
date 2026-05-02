@@ -4,6 +4,7 @@ import subprocess
 import requests
 import sys
 import urllib3
+import argparse
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -158,12 +159,24 @@ def process_room(room_entry, auth_headers):
 def main():
     print("=== RRExporter ===\n")
 
-    bearer_token = input("Enter your Bearer token: ").strip()
+    parser = argparse.ArgumentParser(description="RRExporter")
+    parser.add_argument("--token", help="Bearer token for authentication")
+    parser.add_argument("--json", dest="json_file", help="Path to the JSON file")
+    args = parser.parse_args()
+
+    if args.token:
+        bearer_token = args.token.strip()
+    else:
+        print("Enter your Bearer token: ", end="", flush=True)
+        bearer_token = sys.stdin.readline().strip()
     if not bearer_token:
         print("ERROR: Bearer token cannot be empty.")
         sys.exit(1)
 
-    json_file_path = input("Enter the path to the JSON file: ").strip().strip('"')
+    if args.json_file:
+        json_file_path = args.json_file.strip().strip('"')
+    else:
+        json_file_path = input("Enter the path to the JSON file: ").strip().strip('"')
     if not os.path.isfile(json_file_path):
         print(f"ERROR: File not found: {json_file_path}")
         sys.exit(1)

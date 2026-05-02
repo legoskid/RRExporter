@@ -76,7 +76,7 @@ def main():
         return 0
 
     print(f"Found {len(found)} unique .png references.")
-    base = "https://cdn.rec.net/data/"
+    base = "https://img.rec.net/"
 
     ok = 0
     for name in found:
