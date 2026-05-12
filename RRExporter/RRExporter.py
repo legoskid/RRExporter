@@ -5,10 +5,27 @@ import requests
 import sys
 import urllib3
 import argparse
+from datetime import datetime
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+class TeeFile:
+    """A file-like object that writes to both a file and stdout."""
+    def __init__(self, file_obj, stdout):
+        self.file = file_obj
+        self.stdout = stdout
+    
+    def write(self, data):
+        self.file.write(data)
+        self.stdout.write(data)
+        self.file.flush()
+    
+    def flush(self):
+        self.file.flush()
+        self.stdout.flush()
 
 def sanitize_folder_name(name, max_length=50):
     """Sanitize and truncate a string to be used as a folder name."""
@@ -41,11 +58,15 @@ def run_asset_scripts(datablob_path, output_folder):
         cmd = [sys.executable, script_path, datablob_path, "-o", output_folder]
         print(f"  Running: {' '.join(cmd)}")
         try:
-            subprocess.run(cmd, check=True)
-        except subprocess.CalledProcessError as e:
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.stdout:
+                print(result.stdout, end='')
+            if result.stderr:
+                print(result.stderr, end='')
+            if result.returncode != 0:
+                print(f"  ERROR: Script {script} exited with code {result.returncode}")
+        except Exception as e:
             print(f"  ERROR running {script}: {e}")
-        except FileNotFoundError:
-            print(f"  ERROR: Script not found: {script_path}")
 
 def process_subroom(subroom, room_id, room_folder, auth_headers):
     """Process a single SubRoom: download assets, past versions, and run scripts."""
@@ -203,8 +224,30 @@ def main():
     auth_headers = {"Authorization": f"Bearer {bearer_token}"}
 
     print(f"\nFound {len(room_list)} room(s) to process.\n")
+    
+    original_stdout = sys.stdout
+    
     for room_entry in room_list:
-        process_room(room_entry, auth_headers)
+        room_id = room_entry.get("RoomId")
+        room_name = sanitize_folder_name(room_entry.get("Name", f"Room_{room_id}"))
+        room_folder = room_name
+        os.makedirs(room_folder, exist_ok=True)
+        
+        # Create log file for this room
+        log_filename = f"{room_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        log_path = os.path.join(room_folder, log_filename)
+        log_file = open(log_path, "w", encoding="utf-8")
+        
+        # Redirect stdout to write to both console and log file
+        sys.stdout = TeeFile(log_file, original_stdout)
+        
+        try:
+            process_room(room_entry, auth_headers)
+        finally:
+            # Restore stdout and close log file
+            sys.stdout = original_stdout
+            log_file.close()
+            print(f"Log saved to: {log_path}")
 
     print("\n\nAll rooms processed successfully.")
 
