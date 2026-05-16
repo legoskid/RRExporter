@@ -103,6 +103,12 @@ def process_subroom(subroom, room_id, room_folder, auth_headers):
         saves_response.raise_for_status()
         saves_data = saves_response.json()
 
+        # Save the raw API response
+        raw_response_path = os.path.join(past_versions_folder, "saves_response.json")
+        with open(raw_response_path, "w", encoding="utf-8") as rf:
+            json.dump(saves_data, rf, indent=2)
+        print(f"  Saved raw saves response: {raw_response_path}")
+
         # The result is a single {} containing a "Results" []
         if isinstance(saves_data, list):
             saves_data = saves_data[0] if saves_data else {}
